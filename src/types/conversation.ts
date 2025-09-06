@@ -7,17 +7,26 @@ export interface ConversationMessage {
     model?: string;
     tokens?: number;
     processingTime?: number;
+    error?: boolean;
+    isStreaming?: boolean;
   };
+}
+
+export interface ConversationExchange {
+  userMessage: ConversationMessage;
+  aiResponse?: ConversationMessage;
+  isGenerating?: boolean;
 }
 
 export interface ConversationNode {
   id: string;
   messageId: string;
   parentNodeId: string | null;
-  type: 'user' | 'assistant' | 'root';
+  type: 'user' | 'assistant' | 'root' | 'exchange';
   position: { x: number; y: number };
   data: {
     message?: ConversationMessage;
+    exchange?: ConversationExchange;
     label?: string;
     isSelected?: boolean;
     branchPoint?: {
