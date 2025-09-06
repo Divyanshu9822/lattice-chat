@@ -2,7 +2,6 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { 
   ConversationSession, 
-  ConversationBranch, 
   ConversationMessage,
   ConversationCanvas,
   ConversationNode,
@@ -10,7 +9,7 @@ import type {
   StreamingState,
   TextSelection
 } from '../types';
-import { generateId, generateBranchTitle } from '../utils';
+import { generateId } from '../utils';
 
 interface ConversationStore {
   // State
@@ -51,14 +50,6 @@ interface ConversationStore {
   startStreaming: (nodeId: string) => void;
   updateStreamingText: (text: string) => void;
   finishStreaming: () => void;
-
-  // Legacy Actions (for backward compatibility)
-  createBranch: (parentBranchId: string, messageIndex: number, newMessage?: string) => string;
-  setActiveBranch: (branchId: string) => void;
-  addMessage: (branchId: string, message: ConversationMessage) => void;
-  getConversationHistory: (branchId: string) => ConversationMessage[];
-  getActiveBranch: () => ConversationBranch | null;
-  getBranch: (branchId: string) => ConversationBranch | null;
 
   // Utility Actions
   clearAll: () => void;
@@ -123,28 +114,15 @@ export const useConversationStore = create<ConversationStore>()(
       createSession: (title = 'New Conversation') => {
         const sessionId = generateId();
         
-        // Create initial canvas with root node
-        const rootNode: ConversationNode = {
-          id: 'root',
-          messageId: '',
-          parentNodeId: null,
-          type: 'root',
-          position: { x: 0, y: 0 },
-          data: {
-            label: 'Start your conversation',
-          },
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
-
+        // Create initial empty canvas
         const canvas: ConversationCanvas = {
           id: generateId(),
           title,
-          nodes: [rootNode],
+          nodes: [],
           edges: [],
           viewport: { x: 0, y: 0, zoom: 1 },
           metadata: {
-            nodeCount: 1,
+            nodeCount: 0,
             branchCount: 0,
             lastActivity: new Date(),
           },
@@ -156,8 +134,6 @@ export const useConversationStore = create<ConversationStore>()(
           id: sessionId,
           title,
           canvas,
-          branches: [], // Keep for backward compatibility
-          activeBranchId: '',
           metadata: {
             totalMessages: 0,
             branchCount: 0,
@@ -229,6 +205,11 @@ export const useConversationStore = create<ConversationStore>()(
               },
               updatedAt: new Date(),
             },
+            metadata: {
+              ...updatedSessions[sessionIndex].metadata,
+              totalMessages: updatedSessions[sessionIndex].metadata.totalMessages + (node.data.message ? 1 : 0),
+              lastActivity: new Date(),
+            },
           };
           return { sessions: updatedSessions };
         });
@@ -261,6 +242,10 @@ export const useConversationStore = create<ConversationStore>()(
                 nodes: updatedNodes,
                 updatedAt: new Date(),
               },
+              metadata: {
+                ...updatedSessions[sessionIndex].metadata,
+                lastActivity: new Date(),
+              },
             };
           }
           
@@ -279,6 +264,10 @@ export const useConversationStore = create<ConversationStore>()(
           const updatedSessions = [...state.sessions];
           const canvas = updatedSessions[sessionIndex].canvas;
           
+          // Count removed messages for metadata update
+          const removedNode = canvas.nodes.find(n => n.id === nodeId);
+          const messageRemoved = removedNode?.data.message ? 1 : 0;
+          
           updatedSessions[sessionIndex] = {
             ...updatedSessions[sessionIndex],
             canvas: {
@@ -291,6 +280,11 @@ export const useConversationStore = create<ConversationStore>()(
                 lastActivity: new Date(),
               },
               updatedAt: new Date(),
+            },
+            metadata: {
+              ...updatedSessions[sessionIndex].metadata,
+              totalMessages: Math.max(0, updatedSessions[sessionIndex].metadata.totalMessages - messageRemoved),
+              lastActivity: new Date(),
             },
           };
           return { sessions: updatedSessions };
@@ -313,7 +307,17 @@ export const useConversationStore = create<ConversationStore>()(
             canvas: {
               ...canvas,
               edges: [...canvas.edges, edge],
+              metadata: {
+                ...canvas.metadata,
+                branchCount: edge.type === 'branch' ? canvas.metadata.branchCount + 1 : canvas.metadata.branchCount,
+                lastActivity: new Date(),
+              },
               updatedAt: new Date(),
+            },
+            metadata: {
+              ...updatedSessions[sessionIndex].metadata,
+              branchCount: edge.type === 'branch' ? updatedSessions[sessionIndex].metadata.branchCount + 1 : updatedSessions[sessionIndex].metadata.branchCount,
+              lastActivity: new Date(),
             },
           };
           return { sessions: updatedSessions };
@@ -331,12 +335,26 @@ export const useConversationStore = create<ConversationStore>()(
           const updatedSessions = [...state.sessions];
           const canvas = updatedSessions[sessionIndex].canvas;
           
+          // Count removed branches for metadata update
+          const removedEdge = canvas.edges.find(e => e.id === edgeId);
+          const branchRemoved = removedEdge?.type === 'branch' ? 1 : 0;
+          
           updatedSessions[sessionIndex] = {
             ...updatedSessions[sessionIndex],
             canvas: {
               ...canvas,
               edges: canvas.edges.filter(e => e.id !== edgeId),
+              metadata: {
+                ...canvas.metadata,
+                branchCount: Math.max(0, canvas.metadata.branchCount - branchRemoved),
+                lastActivity: new Date(),
+              },
               updatedAt: new Date(),
+            },
+            metadata: {
+              ...updatedSessions[sessionIndex].metadata,
+              branchCount: Math.max(0, updatedSessions[sessionIndex].metadata.branchCount - branchRemoved),
+              lastActivity: new Date(),
             },
           };
           return { sessions: updatedSessions };
@@ -465,36 +483,6 @@ export const useConversationStore = create<ConversationStore>()(
         });
       },
 
-      // Legacy Actions (for backward compatibility)
-      createBranch: (parentBranchId: string, messageIndex: number, newMessage?: string) => {
-        // For now, delegate to canvas-based approach
-        // This maintains backward compatibility
-        return '';
-      },
-
-      setActiveBranch: (branchId: string) => {
-        // Legacy method - no-op for canvas mode
-      },
-
-      addMessage: (branchId: string, message: ConversationMessage) => {
-        // Legacy method - no-op for canvas mode
-      },
-
-      getConversationHistory: (branchId: string) => {
-        // Legacy method - return empty for canvas mode
-        return [];
-      },
-
-      getActiveBranch: () => {
-        // Legacy method - return null for canvas mode
-        return null;
-      },
-
-      getBranch: (branchId: string) => {
-        // Legacy method - return null for canvas mode
-        return null;
-      },
-
       // Utility Actions
       clearAll: () => {
         set({
@@ -512,10 +500,10 @@ export const useConversationStore = create<ConversationStore>()(
     }),
     {
       name: 'conversation-storage',
-      version: 2, // Increment version for breaking changes
-      migrate: (persistedState: any, version: number) => {
-        // Clear old data to prevent conflicts with new canvas structure
-        if (version < 2) {
+      version: 4, // Increment version for breaking changes
+      migrate: (persistedState: unknown, version: number) => {
+        // Clear old data to prevent conflicts with new structure
+        if (version < 4) {
           return {
             sessions: [],
             activeSessionId: null,

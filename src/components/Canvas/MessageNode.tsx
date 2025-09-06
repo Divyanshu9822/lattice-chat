@@ -45,12 +45,14 @@ export const MessageNode: React.FC<NodeProps<MessageNodeData>> = ({
     if (!selectedText) return;
 
     const range = selection.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
     
     const selectionData: TextSelection = {
       nodeId: id,
       startIndex: range.startOffset,
       endIndex: range.endOffset,
       selectedText,
+      position: { x: rect.left, y: rect.top },
     };
 
     setTextSelection(selectionData);
@@ -254,9 +256,13 @@ export const MessageNode: React.FC<NodeProps<MessageNodeData>> = ({
       {/* General Branch Button */}
       <motion.button
         initial={{ opacity: 0 }}
-        animate={{ opacity: selected ? 1 : 0 }}
+        animate={{ opacity: 1 }}
         className="absolute top-2 right-2 w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors duration-200"
-        onClick={() => onBranch?.(id)}
+        onClick={() => {
+          console.log('Branch button clicked for node:', id);
+          console.log('onBranch function:', onBranch);
+          onBranch?.(id);
+        }}
         title="Create branch from this exchange"
       >
         <MoreHorizontal className="w-3 h-3 text-gray-600" />

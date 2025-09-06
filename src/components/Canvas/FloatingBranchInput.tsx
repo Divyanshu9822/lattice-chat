@@ -8,6 +8,8 @@ interface FloatingBranchInputProps {
   onSubmit: (message: string) => void;
   onCancel: () => void;
   selectedText?: string;
+  placeholder?: string;
+  className?: string;
 }
 
 export const FloatingBranchInput: React.FC<FloatingBranchInputProps> = ({
@@ -15,6 +17,8 @@ export const FloatingBranchInput: React.FC<FloatingBranchInputProps> = ({
   onSubmit,
   onCancel,
   selectedText,
+  placeholder,
+  className,
 }) => {
   const [message, setMessage] = useState('');
   const [isFocused, setIsFocused] = useState(false);
@@ -62,8 +66,8 @@ export const FloatingBranchInput: React.FC<FloatingBranchInputProps> = ({
       animate={{ opacity: 1, scale: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.9, y: 10 }}
       transition={{ duration: 0.2, ease: 'easeOut' }}
-      className="fixed z-50"
-      style={{
+      className={cn("fixed z-50", className)}
+      style={className?.includes('!relative') ? {} : {
         left: position.x - 150, // Center the input on the position
         top: position.y - 80,   // Position above the click point
       }}
@@ -103,9 +107,9 @@ export const FloatingBranchInput: React.FC<FloatingBranchInputProps> = ({
                   onKeyDown={handleKeyDown}
                   onFocus={() => setIsFocused(true)}
                   onBlur={() => setIsFocused(false)}
-                  placeholder={selectedText 
+                  placeholder={placeholder || (selectedText 
                     ? "Continue the conversation from this point..." 
-                    : "Start a new branch..."}
+                    : "Start a new branch...")}
                   className={cn(
                     'w-full resize-none border-none outline-none bg-transparent',
                     'text-sm text-gray-900 placeholder-gray-500',

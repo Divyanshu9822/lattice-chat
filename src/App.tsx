@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { Header, ConversationCanvas } from './components';
 import { useConversationStore } from './store';
 import './App.css';

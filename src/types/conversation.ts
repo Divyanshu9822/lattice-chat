@@ -45,7 +45,7 @@ export interface ConversationEdge {
   target: string;
   type?: 'default' | 'branch' | 'continuation';
   animated?: boolean;
-  style?: Record<string, any>;
+  style?: Record<string, unknown>;
 }
 
 export interface ConversationCanvas {
@@ -67,24 +67,10 @@ export interface ConversationCanvas {
   updatedAt: Date;
 }
 
-export interface ConversationBranch {
-  id: string;
-  title: string;
-  messages: ConversationMessage[];
-  parentBranchId: string | null;
-  branchPoint: number; // Message index where branch was created
-  position: { x: number; order: number };
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
 export interface ConversationSession {
   id: string;
   title: string;
   canvas: ConversationCanvas;
-  branches: ConversationBranch[]; // Keep for backward compatibility
-  activeBranchId: string;
   metadata: {
     totalMessages: number;
     branchCount: number;
