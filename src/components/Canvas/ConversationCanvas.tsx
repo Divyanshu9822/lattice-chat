@@ -369,6 +369,17 @@ const ConversationCanvasInner: React.FC<ConversationCanvasProps> = ({ className 
     fitView({ padding: 0.2, duration: 500 });
   }, [fitView]);
 
+  /**
+   * Memoized node color function for MiniMap
+   */
+  const getNodeColor = useCallback((node: Node) => {
+    switch (node.type) {
+      case 'message': 
+        return node.data?.exchange?.userMessage ? '#10b981' : '#f59e0b';
+      default: return '#6b7280';
+    }
+  }, []);
+
   return (
     <div 
       ref={reactFlowWrapper} 
@@ -392,26 +403,6 @@ const ConversationCanvasInner: React.FC<ConversationCanvasProps> = ({ className 
         {/* Canvas Background */}
         <Background color="#94a3b8" gap={20} size={1} />
         
-        {/* Empty Canvas Instructions */}
-        {nodes.length === 0 && (
-          <Panel position="top-center" className="bg-white border border-gray-200 rounded-lg shadow-lg p-6 m-4 z-40 max-w-md">
-            <div className="text-center">
-              <div className="flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mx-auto mb-4">
-                <Keyboard className="w-8 h-8 text-blue-600" />
-              </div>
-              <h3 className="font-semibold text-lg text-gray-900 mb-2">
-                Start Your Conversation
-              </h3>
-              <p className="text-sm text-gray-600 mb-4">
-                Press <kbd className="px-2 py-1 bg-gray-100 border border-gray-300 rounded text-xs font-mono">⌘K</kbd> on Mac or <kbd className="px-2 py-1 bg-gray-100 border border-gray-300 rounded text-xs font-mono">Ctrl+K</kbd> on Windows/Linux to open the input box and begin your conversation.
-              </p>
-              <p className="text-xs text-gray-500">
-                Your first message will become the root node of your conversation canvas.
-              </p>
-            </div>
-          </Panel>
-        )}
-        
         {/* Canvas Statistics Panel */}
         {nodes.length > 0 && (
           <Panel position="top-left" className="bg-white border border-gray-200 rounded-lg shadow-lg p-3 m-4 z-40">
@@ -428,32 +419,80 @@ const ConversationCanvasInner: React.FC<ConversationCanvasProps> = ({ className 
           </Panel>
         )}
         
-        {/* Recenter Button */}
-        <div className="absolute bottom-48 right-4 z-50">
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handleFitView}
-            className="p-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors shadow-lg border border-gray-200"
-            title="Recenter view"
-          >
-            <Maximize className="w-5 h-5" />
-          </motion.button>
-        </div>
+        {/* Recenter Button - Only show when there are nodes */}
+        {nodes.length > 0 && (
+          <div className="absolute bottom-48 right-4 z-50">
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleFitView}
+              className="p-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors shadow-lg border border-gray-200"
+              title="Recenter view"
+              aria-label="Recenter view"
+            >
+              <Maximize className="w-5 h-5" aria-hidden="true" />
+            </motion.button>
+          </div>
+        )}
         
-        {/* MiniMap */}
-        <MiniMap 
-          className="bg-white border border-gray-200 rounded-lg shadow-lg"
-          nodeColor={(node) => {
-            switch (node.type) {
-              case 'message': 
-                return node.data?.exchange?.userMessage ? '#10b981' : '#f59e0b';
-              default: return '#6b7280';
-            }
-          }}
-          maskColor="rgba(0, 0, 0, 0.1)"
-        />
+        {/* MiniMap - Only show when there are nodes */}
+        {nodes.length > 0 && (
+          <MiniMap 
+            className="bg-white border border-gray-200 rounded-lg shadow-lg"
+            nodeColor={getNodeColor}
+            maskColor="rgba(0, 0, 0, 0.1)"
+          />
+        )}
       </ReactFlow>
+
+      {/* Empty Canvas Instructions - Outside ReactFlow to avoid pointer event conflicts */}
+      {nodes.length === 0 && (
+        <div 
+          className="absolute inset-0 flex items-center justify-center pointer-events-none z-50"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="canvas-heading"
+          aria-describedby="canvas-instructions"
+        >
+          <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-6 max-w-md pointer-events-auto">
+            <div className="text-center">
+              <div className="flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mx-auto mb-4">
+                <Keyboard className="w-8 h-8 text-blue-600" />
+              </div>
+              <h3 
+                id="canvas-heading"
+                className="font-semibold text-lg text-gray-900 mb-2"
+                aria-describedby="canvas-instructions"
+              >
+                Start Your Conversation
+              </h3>
+              <p id="canvas-instructions" className="text-sm text-gray-600 mb-4">
+                Press <kbd className="px-2 py-1 bg-gray-100 border border-gray-300 rounded text-xs font-mono">⌘K</kbd> on Mac or <kbd className="px-2 py-1 bg-gray-100 border border-gray-300 rounded text-xs font-mono">Ctrl+K</kbd> on Windows/Linux to open the input box and begin your conversation.
+              </p>
+              <button
+                type="button"
+                tabIndex={0}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setShowMainInput(true);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setShowMainInput(true);
+                  }
+                }}
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer"
+                aria-label="Start conversation - Opens input box to begin chatting"
+              >
+                Start conversation
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Floating Branch Input */}
       <AnimatePresence>
@@ -467,10 +506,10 @@ const ConversationCanvasInner: React.FC<ConversationCanvasProps> = ({ className 
         )}
       </AnimatePresence>
 
-      {/* Main Input at Bottom Center */}
+      {/* Main Input - Positioned Higher and Wider */}
       <AnimatePresence>
         {showMainInput && (
-          <div className="absolute inset-x-0 bottom-8 flex justify-center z-50 pointer-events-none">
+          <div className="absolute inset-x-0 bottom-20 flex justify-center z-50 pointer-events-none">
             <motion.div
               initial={{ opacity: 0, y: 50, scale: 0.9 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -482,7 +521,7 @@ const ConversationCanvasInner: React.FC<ConversationCanvasProps> = ({ className 
                 onSubmit={handleMainInputSubmit}
                 onCancel={handleMainInputCancel}
                 placeholder="Start your conversation..."
-                className="!relative !left-0 !top-0 !transform-none"
+                className="!relative !left-0 !top-0 !transform-none !min-w-[400px] !max-w-[600px]"
               />
             </motion.div>
           </div>

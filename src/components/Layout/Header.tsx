@@ -21,7 +21,6 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
   } = useConversationStore();
 
   const activeSession = getActiveSession();
-  const branchCount = activeSession?.metadata.branchCount || 0;
 
   const handleNewSession = () => {
     createSession();
@@ -46,42 +45,32 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
       className
     )}>
       <div className="flex items-center justify-between">
-        {/* Left Side - Logo and Model */}
-        <div className="flex items-center gap-4">
-          {/* Logo */}
-          <motion.div
+        {/* Left Side - Logo */}
+        <div className="flex items-center">
+          <motion.a
+            href="/"
             whileHover={{ scale: 1.05 }}
-            className="flex items-center gap-3"
+            className="flex items-center gap-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            aria-label="Home"
+            onClick={(e) => {
+              e.preventDefault();
+              window.location.reload();
+            }}
           >
             <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-              <span className="text-white text-sm font-bold">AI</span>
+              <span className="text-white text-sm font-bold">LC</span>
             </div>
             <div>
-              <h1 className="text-lg font-semibold text-gray-900">Canvas Chat</h1>
-              <p className="text-xs text-gray-500">Branching Conversations</p>
+              <div 
+                className="text-lg font-semibold text-gray-900" 
+                role="img" 
+                aria-label="LatticeChat logo"
+              >
+                LatticeChat
+              </div>
             </div>
-          </motion.div>
-
-          {/* Model Indicator */}
-          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-full">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-            <span className="text-sm font-medium text-gray-700">Gemini 2.0 Flash</span>
-          </div>
+          </motion.a>
         </div>
-
-        {/* Center - Session Info */}
-        {activeSession && (
-          <div className="hidden md:flex items-center gap-4 text-sm text-gray-600">
-            <div className="flex items-center gap-2">
-              <MessageSquare className="w-4 h-4" />
-              <span>{activeSession.metadata.totalMessages} messages</span>
-            </div>
-            <div className="w-1 h-1 bg-gray-400 rounded-full" />
-            <div className="flex items-center gap-2">
-              <span>{branchCount} branch{branchCount !== 1 ? 'es' : ''}</span>
-            </div>
-          </div>
-        )}
 
         {/* Right Side - Controls */}
         <div className="flex items-center gap-3">

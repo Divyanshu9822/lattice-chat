@@ -1,4 +1,4 @@
-# Canvas Chat Interface 🎨💬
+# LatticeChat 🎨💬
 
 A modern, canvas-based AI chat interface with visual conversation branching capabilities. Built as a prototype for exploring non-linear AI conversations through an infinite canvas interface.
 
@@ -36,7 +36,7 @@ A modern, canvas-based AI chat interface with visual conversation branching capa
 ```bash
 # Clone and install
 git clone <repository-url>
-cd canvas-chat-interface
+cd latticechat
 npm install
 
 # Environment setup
@@ -163,4 +163,4 @@ MIT License - see [LICENSE](LICENSE) for details.
 - [Zustand](https://zustand-demo.pmnd.rs/) - State management
 
 ---
-**Canvas Chat Interface - Prototype v1.0**
+**LatticeChat - Prototype v1.0**
