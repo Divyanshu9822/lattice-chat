@@ -16,10 +16,19 @@ export function generateId(): string {
 
 /**
  * Format a timestamp into a human-readable relative time string
+ * Handles both Date objects and date strings (from JSON serialization)
  */
-export function formatTimestamp(date: Date): string {
+export function formatTimestamp(date: Date | string): string {
+  // Convert string dates back to Date objects if needed
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  
+  // Handle invalid dates
+  if (isNaN(dateObj.getTime())) {
+    return 'Unknown';
+  }
+  
   const now = new Date();
-  const diff = now.getTime() - date.getTime();
+  const diff = now.getTime() - dateObj.getTime();
   const minutes = Math.floor(diff / 60000);
   const hours = Math.floor(diff / 3600000);
   const days = Math.floor(diff / 86400000);
@@ -28,5 +37,5 @@ export function formatTimestamp(date: Date): string {
   if (minutes < 60) return `${minutes}m ago`;
   if (hours < 24) return `${hours}h ago`;
   if (days < 7) return `${days}d ago`;
-  return date.toLocaleDateString();
+  return dateObj.toLocaleDateString();
 }

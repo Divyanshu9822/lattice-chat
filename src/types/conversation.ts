@@ -3,6 +3,7 @@ export interface ConversationMessage {
   content: string;
   role: 'user' | 'assistant';
   timestamp: Date;
+  quotedText?: string; // Referenced text from previous messages
   metadata?: {
     model?: string;
     tokens?: number;
@@ -12,31 +13,27 @@ export interface ConversationMessage {
   };
 }
 
-export interface ConversationExchange {
-  userMessage: ConversationMessage;
-  aiResponse?: ConversationMessage;
-  isGenerating?: boolean;
+// Core message interface for conversation history
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
+  quotedText?: string;
 }
+
 
 export interface ConversationNode {
   id: string;
-  messageId: string;
-  parentNodeId: string | null;
-  type: 'user' | 'assistant' | 'root' | 'exchange';
-  position: { x: number; y: number };
-  data: {
-    message?: ConversationMessage;
-    exchange?: ConversationExchange;
-    label?: string;
-    isSelected?: boolean;
-    branchPoint?: {
-      startIndex: number;
-      endIndex: number;
-      selectedText: string;
-    };
+  parentId: string | null;
+  messages: ChatMessage[]; // Full conversation history up to this point
+  currentExchange: {
+    userMessage: string;
+    aiResponse: string;
+    quotedText?: string; // Selected text that created this branch
+    sourceNodeId?: string; // Node where the text was selected from
   };
+  position: { x: number; y: number };
   createdAt: Date;
-  updatedAt: Date;
 }
 
 export interface ConversationEdge {

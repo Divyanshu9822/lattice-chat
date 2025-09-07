@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { getGeminiService } from '../services/geminiService';
 import { useConversationStore } from '../store';
-import type { ConversationMessage } from '../types';
+import type { ConversationMessage, ChatMessage } from '../types';
 
 interface UseAIChat {
   isLoading: boolean;
@@ -68,6 +68,15 @@ export const useAIChat = (): UseAIChat => {
         // Get conversation history for the specified node
         const history = getNodeHistory(nodeId);
         
+        // Convert ChatMessage[] to ConversationMessage[] format for AI service
+        const conversationHistory: ConversationMessage[] = history.map((msg: ChatMessage) => ({
+          id: crypto.randomUUID(),
+          content: msg.content,
+          role: msg.role,
+          timestamp: msg.timestamp,
+          quotedText: msg.quotedText,
+        }));
+        
         // Add the new user message to history for AI context
         const userMessage: ConversationMessage = {
           id: crypto.randomUUID(),
@@ -75,7 +84,7 @@ export const useAIChat = (): UseAIChat => {
           role: 'user',
           timestamp: new Date(),
         };
-        const updatedHistory = [...history, userMessage];
+        const updatedHistory = [...conversationHistory, userMessage];
 
         // Get AI service and generate response
         const aiService = getAIService();
@@ -119,6 +128,15 @@ export const useAIChat = (): UseAIChat => {
         // Get conversation history for the specified node
         const history = getNodeHistory(nodeId);
         
+        // Convert ChatMessage[] to ConversationMessage[] format for AI service
+        const conversationHistory: ConversationMessage[] = history.map(msg => ({
+          id: crypto.randomUUID(),
+          content: msg.content,
+          role: msg.role,
+          timestamp: msg.timestamp,
+          quotedText: msg.quotedText,
+        }));
+        
         // Add the new user message to history for AI context
         const userMessage: ConversationMessage = {
           id: crypto.randomUUID(),
@@ -126,7 +144,7 @@ export const useAIChat = (): UseAIChat => {
           role: 'user',
           timestamp: new Date(),
         };
-        const updatedHistory = [...history, userMessage];
+        const updatedHistory = [...conversationHistory, userMessage];
         
         // Start streaming state
         startStreaming(nodeId);

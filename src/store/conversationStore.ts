@@ -2,12 +2,12 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { 
   ConversationSession, 
-  ConversationMessage,
   ConversationCanvas,
   ConversationNode,
   ConversationEdge,
   StreamingState,
-  TextSelection
+  TextSelection,
+  ChatMessage
 } from '../types';
 import { generateId } from '../utils';
 
@@ -23,7 +23,8 @@ interface ConversationStore {
   getActiveSession: () => ConversationSession | null;
   getActiveCanvas: () => ConversationCanvas | null;
   getNode: (nodeId: string) => ConversationNode | null;
-  getNodeHistory: (nodeId: string) => ConversationMessage[];
+  getNodeHistory: (nodeId: string) => ChatMessage[];
+  getNodeConversation: (nodeId: string) => ChatMessage[];
 
   // Session Actions
   createSession: (title?: string) => string;
@@ -39,8 +40,7 @@ interface ConversationStore {
   removeEdge: (edgeId: string) => void;
 
   // Node Actions
-  createMessageNode: (parentNodeId: string, message: ConversationMessage, position: { x: number; y: number }) => string;
-  createBranchNode: (parentNodeId: string, message: ConversationMessage, position: { x: number; y: number }, textSelection?: TextSelection) => string;
+  createContextualNode: (userMessage: string, parentNodeId?: string, quotedText?: string, sourceNodeId?: string, position?: { x: number; y: number }) => string;
   setActiveNode: (nodeId: string | null) => void;
 
   // Text Selection Actions
@@ -87,24 +87,35 @@ export const useConversationStore = create<ConversationStore>()(
       },
 
       getNodeHistory: (nodeId: string) => {
-        const canvas = get().getActiveCanvas();
-        if (!canvas) return [];
+        const node = get().getNode(nodeId);
+        if (!node) return [];
+
+        // Return a shallow copy to prevent external mutation
+        return node.messages ? [...node.messages] : [];
+      },
+      getNodeConversation: (nodeId: string) => {
+        const node = get().getNode(nodeId);
+        if (!node) return [];
         
-        // Build conversation history by traversing from root to this node
-        const messages: ConversationMessage[] = [];
-        let currentNodeId: string | null = nodeId;
+        // Return full conversation history including current exchange
+        const messages = [...(node.messages || [])];
         
-        while (currentNodeId) {
-          const node = canvas.nodes.find(n => n.id === currentNodeId);
-          if (!node) break;
-          
-          if (node.data.message) {
-            messages.unshift(node.data.message);
-          }
-          
-          // Find parent node
-          const parentEdge = canvas.edges.find(edge => edge.target === currentNodeId);
-          currentNodeId = parentEdge?.source || null;
+        // Add current exchange if it exists
+        if (node.currentExchange?.userMessage) {
+          messages.push({
+            role: 'user' as const,
+            content: node.currentExchange.userMessage,
+            timestamp: node.createdAt,
+            quotedText: node.currentExchange.quotedText,
+          });
+        }
+        
+        if (node.currentExchange?.aiResponse) {
+          messages.push({
+            role: 'assistant' as const,
+            content: node.currentExchange.aiResponse,
+            timestamp: node.createdAt,
+          });
         }
         
         return messages;
@@ -207,7 +218,7 @@ export const useConversationStore = create<ConversationStore>()(
             },
             metadata: {
               ...updatedSessions[sessionIndex].metadata,
-              totalMessages: updatedSessions[sessionIndex].metadata.totalMessages + (node.data.message ? 1 : 0),
+              totalMessages: updatedSessions[sessionIndex].metadata.totalMessages + 1,
               lastActivity: new Date(),
             },
           };
@@ -232,7 +243,6 @@ export const useConversationStore = create<ConversationStore>()(
             updatedNodes[nodeIndex] = {
               ...updatedNodes[nodeIndex],
               ...updates,
-              updatedAt: new Date(),
             };
             
             updatedSessions[sessionIndex] = {
@@ -265,8 +275,7 @@ export const useConversationStore = create<ConversationStore>()(
           const canvas = updatedSessions[sessionIndex].canvas;
           
           // Count removed messages for metadata update
-          const removedNode = canvas.nodes.find(n => n.id === nodeId);
-          const messageRemoved = removedNode?.data.message ? 1 : 0;
+          const messageRemoved = 1; // Each node represents one conversation exchange
           
           updatedSessions[sessionIndex] = {
             ...updatedSessions[sessionIndex],
@@ -361,71 +370,50 @@ export const useConversationStore = create<ConversationStore>()(
         });
       },
 
-      // Node Actions
-      createMessageNode: (parentNodeId: string, message: ConversationMessage, position: { x: number; y: number }) => {
+      // Create a contextual node with proper conversation history inheritance
+      createContextualNode: (userMessage: string, parentNodeId?: string, quotedText?: string, sourceNodeId?: string, position?: { x: number; y: number }) => {
         const nodeId = generateId();
         
+        // Get COMPLETE parent conversation history if parentNodeId is provided
+        // This includes all previous messages AND the parent's current exchange
+        let parentHistory: ChatMessage[] = [];
+        if (parentNodeId) {
+          parentHistory = get().getNodeConversation(parentNodeId); // FIX: Use getNodeConversation instead of getNodeHistory
+        }
+        
+        // Create new node with inherited conversation history
         const node: ConversationNode = {
           id: nodeId,
-          messageId: message.id,
-          parentNodeId,
-          type: message.role,
-          position,
-          data: {
-            message,
+          parentId: parentNodeId || null,
+          messages: [...parentHistory], // Inherit COMPLETE conversation history including parent's exchange
+          currentExchange: {
+            userMessage: userMessage.trim(),
+            aiResponse: '', // Will be filled when AI responds
+            quotedText: quotedText || undefined,
+            sourceNodeId: sourceNodeId || undefined,
           },
+          position: position || { x: 0, y: 0 },
           createdAt: new Date(),
-          updatedAt: new Date(),
-        };
-
-        const edge: ConversationEdge = {
-          id: generateId(),
-          source: parentNodeId,
-          target: nodeId,
-          type: 'default',
         };
 
         get().addNode(node);
-        get().addEdge(edge);
+        
+        // Create edge if parent exists
+        if (parentNodeId) {
+          const edge: ConversationEdge = {
+            id: generateId(),
+            source: parentNodeId,
+            target: nodeId,
+            type: quotedText ? 'branch' : 'default',
+            animated: quotedText ? true : false,
+            style: quotedText ? { stroke: '#3b82f6', strokeWidth: 2 } : undefined,
+          };
+          get().addEdge(edge);
+        }
         
         return nodeId;
       },
 
-      createBranchNode: (parentNodeId: string, message: ConversationMessage, position: { x: number; y: number }, textSelection?: TextSelection) => {
-        const nodeId = generateId();
-        
-        const node: ConversationNode = {
-          id: nodeId,
-          messageId: message.id,
-          parentNodeId,
-          type: message.role,
-          position,
-          data: {
-            message,
-            branchPoint: textSelection ? {
-              startIndex: textSelection.startIndex,
-              endIndex: textSelection.endIndex,
-              selectedText: textSelection.selectedText,
-            } : undefined,
-          },
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
-
-        const edge: ConversationEdge = {
-          id: generateId(),
-          source: parentNodeId,
-          target: nodeId,
-          type: 'branch',
-          animated: true,
-          style: { stroke: '#3b82f6', strokeWidth: 2 },
-        };
-
-        get().addNode(node);
-        get().addEdge(edge);
-        
-        return nodeId;
-      },
 
       setActiveNode: (nodeId: string | null) => {
         set({ activeNodeId: nodeId });
@@ -459,16 +447,13 @@ export const useConversationStore = create<ConversationStore>()(
       finishStreaming: () => {
         const { streamingState } = get();
         if (streamingState.nodeId && streamingState.currentText) {
-          // Update the node with the final streamed content
+          // Update the node with the final streamed content in the new structure
           const node = get().getNode(streamingState.nodeId);
-          if (node && node.data.message) {
+          if (node) {
             get().updateNode(streamingState.nodeId, {
-              data: {
-                ...node.data,
-                message: {
-                  ...node.data.message,
-                  content: streamingState.currentText,
-                },
+              currentExchange: {
+                ...node.currentExchange,
+                aiResponse: streamingState.currentText,
               },
             });
           }

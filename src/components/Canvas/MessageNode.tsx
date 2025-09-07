@@ -2,15 +2,13 @@ import React, { useState, useRef, useCallback } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { motion } from 'framer-motion';
 import { User, Bot, GitBranch } from 'lucide-react';
-import type { ConversationMessage, TextSelection } from '../../types';
+import type { ConversationNode, TextSelection } from '../../types';
 import { cn, formatTimestamp } from '../../utils';
 
 export interface MessageNodeData {
-  exchange: {
-    userMessage: ConversationMessage;
-    aiResponse?: ConversationMessage;
-    isGenerating?: boolean;
-  };
+  node: ConversationNode;
+  isStreaming?: boolean;
+  streamingText?: string;
   onTextSelection?: (selection: TextSelection) => void;
   onBranch?: (nodeId: string, selection?: TextSelection) => void;
 }
@@ -23,8 +21,12 @@ export const MessageNode: React.FC<NodeProps & { data: MessageNodeData }> = ({
   const [textSelection, setTextSelection] = useState<TextSelection | null>(null);
   const aiContentRef = useRef<HTMLDivElement>(null);
 
-  const { exchange, onTextSelection, onBranch } = data;
-  const { userMessage, aiResponse, isGenerating } = exchange;
+  const { node, isStreaming, streamingText, onTextSelection, onBranch } = data;
+  const { currentExchange } = node;
+  
+  // Get conversation context indicators
+  const messageCount = node.messages?.length || 0;
+  const hasQuotedText = currentExchange?.quotedText;
 
   const handleTextSelection = useCallback(() => {
     setTimeout(() => {
@@ -118,6 +120,24 @@ export const MessageNode: React.FC<NodeProps & { data: MessageNodeData }> = ({
           style={{ bottom: -6 }}
         />
 
+        {/* Conversation Context Header */}
+        {(messageCount > 0 || hasQuotedText) && (
+          <div className="px-4 py-2 bg-gray-50 border-b border-gray-100">
+            <div className="flex items-center gap-2 text-xs text-gray-600">
+              {messageCount > 0 && (
+                <span className="bg-gray-200 px-2 py-1 rounded">
+                  {messageCount} message{messageCount !== 1 ? 's' : ''} in history
+                </span>
+              )}
+              {hasQuotedText && (
+                <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                  Referencing: "{hasQuotedText.slice(0, 30)}..."
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* User Message Section */}
         <div className="border-b border-gray-100">
           <div className="px-4 py-3 bg-blue-50 flex items-center gap-3">
@@ -128,12 +148,12 @@ export const MessageNode: React.FC<NodeProps & { data: MessageNodeData }> = ({
               <p className="font-medium text-sm text-gray-900">You</p>
             </div>
             <p className="text-xs text-gray-500">
-              {formatTimestamp(userMessage.timestamp)}
+              {formatTimestamp(node.createdAt)}
             </p>
           </div>
           <div className="nodrag p-4" style={{ userSelect: 'text' }}>
             <div className="nodrag text-sm leading-relaxed text-gray-900 whitespace-pre-wrap break-words select-text cursor-text">
-              {userMessage.content}
+              {currentExchange?.userMessage}
             </div>
           </div>
         </div>
@@ -147,31 +167,39 @@ export const MessageNode: React.FC<NodeProps & { data: MessageNodeData }> = ({
             <div className="flex-1">
               <p className="font-medium text-sm text-gray-900">Assistant</p>
             </div>
-            {aiResponse?.metadata?.model && (
-              <span className="px-2 py-1 bg-gray-100 text-xs text-gray-600 rounded">
-                {aiResponse.metadata.model}
-              </span>
-            )}
-            {aiResponse && (
-              <p className="text-xs text-gray-500">
-                {formatTimestamp(aiResponse.timestamp)}
-              </p>
-            )}
+            <span className="px-2 py-1 bg-gray-100 text-xs text-gray-600 rounded">
+              Gemini 2.5 Flash
+            </span>
+            <p className="text-xs text-gray-500">
+              {formatTimestamp(node.createdAt)}
+            </p>
           </div>
           <div className="nodrag p-4 relative" style={{ userSelect: 'text' }}>
-            {isGenerating ? (
-              <div className="flex items-center gap-2 text-gray-500">
-                <div className="animate-spin w-4 h-4 border-2 border-green-500 border-t-transparent rounded-full"></div>
-                <span className="text-sm">Thinking...</span>
+            {isStreaming ? (
+              <div className="flex flex-col gap-2 text-gray-500">
+                <div className="flex items-center gap-2">
+                  <div className="animate-spin w-4 h-4 border-2 border-green-500 border-t-transparent rounded-full"></div>
+                  <span className="text-sm">Thinking...</span>
+                </div>
+                {streamingText && (
+                  <div
+                    ref={aiContentRef}
+                    className="nodrag text-sm leading-relaxed text-gray-900 whitespace-pre-wrap break-words select-text cursor-text"
+                    onMouseUp={handleTextSelection}
+                    style={{ userSelect: 'text', WebkitUserSelect: 'text', MozUserSelect: 'text' }}
+                  >
+                    {streamingText}
+                  </div>
+                )}
               </div>
-            ) : aiResponse ? (
+            ) : currentExchange?.aiResponse ? (
               <div
                 ref={aiContentRef}
                 className="nodrag text-sm leading-relaxed text-gray-900 whitespace-pre-wrap break-words select-text cursor-text"
                 onMouseUp={handleTextSelection}
                 style={{ userSelect: 'text', WebkitUserSelect: 'text', MozUserSelect: 'text' }}
               >
-                {aiResponse.content}
+                {currentExchange.aiResponse}
               </div>
             ) : (
               <div className="text-sm text-gray-400 italic">

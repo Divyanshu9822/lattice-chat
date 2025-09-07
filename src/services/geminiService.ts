@@ -106,7 +106,14 @@ export class GeminiService {
   private formatConversationForAPI(messages: ConversationMessage[]): string {
     const formattedMessages = messages.map(msg => {
       const role = msg.role === 'user' ? 'Human' : 'Assistant';
-      return `${role}: ${msg.content}`;
+      let content = msg.content;
+      
+      // Add quoted text context if present
+      if (msg.quotedText && msg.quotedText.trim() !== '') {
+        content = `[Referencing: "${msg.quotedText}"]\n\n${content}`;
+      }
+      
+      return `${role}: ${content}`;
     });
 
     return formattedMessages.join('\n\n') + '\n\nAssistant:';

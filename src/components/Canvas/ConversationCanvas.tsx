@@ -21,8 +21,8 @@ import { MessageNode } from './MessageNode';
 import { FloatingBranchInput } from './FloatingBranchInput';
 import { useConversationStore } from '../../store';
 import { useAIChat } from '../../hooks';
-import type { TextSelection, ConversationMessage } from '../../types';
-import { cn, generateId } from '../../utils';
+import type { TextSelection } from '../../types';
+import { cn } from '../../utils';
 
 import '@xyflow/react/dist/style.css';
 
@@ -48,25 +48,54 @@ const ConversationCanvasInner: React.FC<ConversationCanvasProps> = ({ className 
   const { 
     getActiveSession, 
     createSession,
+    createContextualNode,
+    getNode: getStoreNode,
+    updateNode,
+    streamingState,
   } = useConversationStore();
 
   const { streamMessage } = useAIChat();
 
   const { 
     fitView,
-    getNode,
+    getNode: getFlowNode,
   } = useReactFlow();
 
+  // Sync store nodes with React Flow nodes
   useEffect(() => {
     const session = getActiveSession();
-    
     if (!session) {
       createSession('New Conversation');
       return;
     }
 
-    initializeEmptyCanvas();
-  }, [getActiveSession, createSession]);
+    // Convert store nodes to React Flow nodes
+    const flowNodes = session.canvas.nodes.map(storeNode => ({
+      id: storeNode.id,
+      type: 'message',
+      position: storeNode.position,
+      data: {
+        node: storeNode,
+        isStreaming: streamingState.nodeId === storeNode.id ? streamingState.isStreaming : false,
+        streamingText: streamingState.nodeId === storeNode.id ? streamingState.currentText : undefined,
+        onTextSelection: handleTextSelection,
+        onBranch: handleBranchRequest,
+      },
+    }));
+
+    // Convert store edges to React Flow edges
+    const flowEdges = session.canvas.edges.map(storeEdge => ({
+      id: storeEdge.id,
+      source: storeEdge.source,
+      target: storeEdge.target,
+      type: storeEdge.type,
+      animated: storeEdge.animated,
+      style: storeEdge.style,
+    }));
+
+    setNodes(flowNodes);
+    setEdges(flowEdges);
+  }, [getActiveSession, streamingState, createSession]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -86,20 +115,12 @@ const ConversationCanvasInner: React.FC<ConversationCanvasProps> = ({ className 
     };
   }, []);
 
-  const initializeEmptyCanvas = () => {
-    setNodes([]);
-    setEdges([]);
-    setTimeout(() => {
-      fitView({ padding: 0.2 });
-    }, 100);
-  };
-
   const handleTextSelection = useCallback((selection: TextSelection) => {
     setTextSelection(selection);
   }, []);
 
   const handleBranchRequest = useCallback((nodeId: string, selection?: TextSelection) => {
-    const node = getNode(nodeId);
+    const node = getFlowNode(nodeId);
     if (!node) return;
 
     const screenPosition = {
@@ -114,160 +135,92 @@ const ConversationCanvasInner: React.FC<ConversationCanvasProps> = ({ className 
     if (selection) {
       setTextSelection(selection);
     }
-  }, [getNode]);
+  }, [getFlowNode]);
 
   const handleMainInputSubmit = useCallback(async (message: string) => {
-    const exchangeNodeId = generateId();
-    
-    const userMessage: ConversationMessage = {
-      id: generateId(),
-      content: message.trim(),
-      role: 'user',
-      timestamp: new Date(),
-    };
-    
-    const exchangeNode: Node = {
-      id: exchangeNodeId,
-      type: 'message',
-      position: { x: 0, y: 0 },
-      data: {
-        exchange: {
-          userMessage,
-          isGenerating: true,
-        },
-        onTextSelection: handleTextSelection,
-        onBranch: handleBranchRequest,
-      },
-    };
-
-    setNodes([exchangeNode]);
-    setEdges([]);
+    // Create new contextual node (root node)
+    const nodeId = createContextualNode(message, undefined, undefined, undefined, { x: 0, y: 0 });
     setShowMainInput(false);
     
     try {
-      await generateAIResponse(exchangeNodeId, userMessage);
+      // Generate AI response
+      const response = await streamMessage(message, nodeId);
+      
+      // Update the node with the AI response
+      const storeNode = getStoreNode(nodeId);
+      if (storeNode) {
+        updateNode(nodeId, {
+          currentExchange: {
+            ...storeNode.currentExchange,
+            aiResponse: response,
+          },
+        });
+      }
     } catch (error) {
-      handleAIError(exchangeNodeId, userMessage, error);
+      console.error('Failed to generate AI response:', error);
+      // Update with error message
+      const storeNode = getStoreNode(nodeId);
+      if (storeNode) {
+        updateNode(nodeId, {
+          currentExchange: {
+            ...storeNode.currentExchange,
+            aiResponse: `Error: ${error instanceof Error ? error.message : 'Unknown error occurred'}. Please check your API configuration and try again.`,
+          },
+        });
+      }
     }
-  }, [handleBranchRequest, handleTextSelection]);
+  }, [createContextualNode, streamMessage, getStoreNode, updateNode]);
 
   const handleBranchSubmit = useCallback(async (message: string) => {
     if (!selectedNodeId || !branchInputPosition) return;
 
-    const exchangeNodeId = generateId();
-    const parentNode = getNode(selectedNodeId);
-    if (!parentNode) return;
+    const parentFlowNode = getFlowNode(selectedNodeId);
+    if (!parentFlowNode) return;
     
     const newNodePosition = {
-      x: parentNode.position.x + (parentNode.width || 400) + 100,
-      y: parentNode.position.y + 50,
+      x: parentFlowNode.position.x + (parentFlowNode.width || 400) + 100,
+      y: parentFlowNode.position.y + 50,
     };
     
-    const userMessage: ConversationMessage = {
-      id: generateId(),
-      content: message.trim(),
-      role: 'user',
-      timestamp: new Date(),
-    };
-    
-    const exchangeNode: Node = {
-      id: exchangeNodeId,
-      type: 'message',
-      position: newNodePosition,
-      data: {
-        exchange: {
-          userMessage,
-          isGenerating: true,
-        },
-        onTextSelection: handleTextSelection,
-        onBranch: handleBranchRequest,
-      },
-    };
-
-    const newEdge: Edge = {
-      id: generateId(),
-      source: selectedNodeId,
-      target: exchangeNodeId,
-      animated: true,
-      style: { stroke: textSelection ? '#3b82f6' : '#6b7280' },
-    };
-
-    setNodes((nds) => [...nds, exchangeNode]);
-    setEdges((eds) => [...eds, newEdge]);
+    // Create new contextual node as branch
+    const nodeId = createContextualNode(
+      message,
+      selectedNodeId,
+      textSelection?.selectedText,
+      textSelection?.nodeId,
+      newNodePosition
+    );
     
     resetBranchInput();
 
     try {
-      await generateAIResponse(exchangeNodeId, userMessage);
+      // Generate AI response
+      const response = await streamMessage(message, nodeId);
+      
+      // Update the node with the AI response
+      const storeNode = getStoreNode(nodeId);
+      if (storeNode) {
+        updateNode(nodeId, {
+          currentExchange: {
+            ...storeNode.currentExchange,
+            aiResponse: response,
+          },
+        });
+      }
     } catch (error) {
-      handleAIError(exchangeNodeId, userMessage, error);
+      console.error('Failed to generate AI response:', error);
+      // Update with error message
+      const storeNode = getStoreNode(nodeId);
+      if (storeNode) {
+        updateNode(nodeId, {
+          currentExchange: {
+            ...storeNode.currentExchange,
+            aiResponse: `Error: ${error instanceof Error ? error.message : 'Unknown error occurred'}. Please check your API configuration and try again.`,
+          },
+        });
+      }
     }
-  }, [selectedNodeId, branchInputPosition, textSelection, handleTextSelection, handleBranchRequest, getNode]);
-
-  const generateAIResponse = async (exchangeNodeId: string, userMessage: ConversationMessage) => {
-    const response = await streamMessage(userMessage.content, exchangeNodeId);
-    
-    const aiMessage: ConversationMessage = {
-      id: generateId(),
-      content: response,
-      role: 'assistant',
-      timestamp: new Date(),
-      metadata: {
-        model: 'gemini-2.5-flash',
-      },
-    };
-    
-    setNodes((nds) => 
-      nds.map((node) => 
-        node.id === exchangeNodeId
-          ? {
-              ...node,
-              data: {
-                ...node.data,
-                exchange: {
-                  userMessage,
-                  aiResponse: aiMessage,
-                  isGenerating: false,
-                },
-              },
-            }
-          : node
-      )
-    );
-  };
-
-  const handleAIError = (exchangeNodeId: string, userMessage: ConversationMessage, error: unknown) => {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    
-    const aiMessage: ConversationMessage = {
-      id: generateId(),
-      content: `Error: ${errorMessage}. Please check your API configuration and try again.`,
-      role: 'assistant',
-      timestamp: new Date(),
-      metadata: {
-        model: 'gemini-2.5-flash',
-        error: true,
-      },
-    };
-    
-    setNodes((nds) => 
-      nds.map((node) => 
-        node.id === exchangeNodeId
-          ? {
-              ...node,
-              data: {
-                ...node.data,
-                exchange: {
-                  userMessage,
-                  aiResponse: aiMessage,
-                  isGenerating: false,
-                },
-              },
-            }
-          : node
-      )
-    );
-  };
+  }, [selectedNodeId, branchInputPosition, textSelection, getFlowNode, createContextualNode, streamMessage, getStoreNode, updateNode]);
 
   const resetBranchInput = () => {
     setShowBranchInput(false);
