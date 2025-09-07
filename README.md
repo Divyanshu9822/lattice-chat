@@ -1,166 +1,151 @@
-# LatticeChat 🎨💬
+# Lattice Chat
 
-A modern, canvas-based AI chat interface with visual conversation branching capabilities. Built as a prototype for exploring non-linear AI conversations through an infinite canvas interface.
+> A revolutionary AI chat interface that transforms conversations through visual branching and context-aware interactions.
 
-## ✨ Features
 
-### Core Functionality
-- **Canvas-Based Conversations**: Messages displayed as connected nodes on an infinite canvas
-- **Visual Branching**: Create conversation branches from any message with visual connections
-- **Real-time AI Streaming**: Powered by Google Gemini AI with streaming responses
-- **Session Management**: Multiple conversation sessions with local persistence
-- **Infinite Canvas**: Pan, zoom, and navigate through conversation trees
+AI conversations by introducing **Git-like branching** to chat interfaces. Unlike traditional linear chat applications, Lattice allows you to explore multiple conversation paths simultaneously on an interactive canvas, making complex discussions more organized and productive.
 
-### User Experience
-- **Keyboard Shortcuts**: `⌘K`/`Ctrl+K` to start conversations, `Esc` to cancel
-- **Smooth Animations**: Framer Motion powered transitions
-- **Intuitive Controls**: Pan with drag, zoom with mouse wheel, recenter with button
-- **Visual Statistics**: Real-time node and connection counts
+**Perfect for:**
+- Research and exploration with multiple AI conversation threads
+- Creative brainstorming sessions with divergent thinking paths
+- Complex problem-solving requiring multiple solution approaches
+- Teams collaborating on AI-assisted projects
+- Anyone who wants to maximize AI conversation potential
 
-### Technical Architecture
-- **TypeScript**: Complete type safety throughout
-- **React 18**: Modern hooks and concurrent features
-- **ReactFlow**: Professional canvas rendering engine
-- **Zustand**: Lightweight state management
-- **Tailwind CSS**: Utility-first styling
-- **Vite**: Fast development and optimized builds
+**Key Philosophy:** Transform linear conversations into visual conversation trees where every response can branch into new exploration paths.
 
-## 🚀 Quick Start
+## 🚀 Key Features
+
+### 🌳 **Visual Conversation Branching**
+- **Git-like branching system** - Create new conversation paths from any point
+- **Interactive canvas** - Navigate conversations like a mind map
+- **Visual connections** - See how conversations relate and flow
+- **Infinite exploration** - No limits on conversation depth or breadth
+
+### 🎯 **Context-Aware Text Selection**
+- **Smart text selection** - Select any part of AI responses to branch from
+- **Automatic quoting** - Selected text appears as context in new branches  
+- **Seamless branching** - Natural workflow from selection to new conversation
+- **Context preservation** - Full conversation history maintained across branches
+
+### 🤖 **Powered by Google Gemini**
+- **Advanced AI responses** with Gemini 2.5 Flash integration by default
+- **Context-aware conversations** that understand conversation history
+- **Streaming responses** for real-time interaction
+
+### 🎨 **Professional Canvas Interface**
+- **Zoomable canvas** - Navigate large conversation trees with ease
+- **Smooth animations** - Polished interactions and transitions
+- **Drag and pan** - Intuitive canvas navigation
+- **Mini-map** - Overview of entire conversation structure
+
+
+## 📦 Installation & Setup
 
 ### Prerequisites
-- Node.js 18+ and npm
-- Google Gemini API key (required)
+- **Node.js** version 18.0 or higher
+- **Google Gemini API key** - Get yours from [Google AI Studio](https://aistudio.google.com/app/apikey)
 
-### Installation
-
+### Quick Start
 ```bash
-# Clone and install
-git clone <repository-url>
-cd latticechat
+# Clone the repository
+git clone https://github.com/your-username/lattice-chat.git
+cd lattice-chat
+
+# Install dependencies
 npm install
 
-# Environment setup
-cp .env.example .env
-# Edit .env and add: VITE_GEMINI_API_KEY=your_actual_api_key_here
+# Set up environment variables
+cp .env.example .env.local
+# Add your Google Gemini API key to .env.local
 
-# Development
+# Start development server
 npm run dev
-
-# Production build
-npm run build
 ```
 
-## 🎯 Usage
-
-### Starting Conversations
-1. Press `⌘K` (Mac) or `Ctrl+K` (Windows/Linux)
-2. Type your message and press Enter
-3. AI responses stream in real-time as canvas nodes
-
-### Creating Branches
-1. Hover over any message node
-2. Click the branch button that appears
-3. Type your branch message in the floating input
-4. New conversation path created with visual connections
-
-### Canvas Navigation
-- **Pan**: Click and drag empty space
-- **Zoom**: Mouse wheel or trackpad
-- **Recenter**: Blue button in bottom right
-- **Statistics**: Node/edge counts in top left
-
-### Session Management
-- Access via header dropdown (top right)
-- Create/switch/delete conversation sessions
-- All data persists locally
-
-## 🏗️ Architecture
-
-### Project Structure
-```
-src/
-├── components/
-│   ├── Canvas/          # Canvas components and nodes
-│   └── Layout/          # Header and app layout
-├── hooks/
-│   └── useAIChat.ts     # AI integration hook
-├── services/
-│   └── geminiService.ts # Gemini API service
-├── store/
-│   ├── conversationStore.ts # Conversation state
-│   └── uiStore.ts       # UI state
-├── types/               # TypeScript definitions
-└── utils/               # Utility functions
+### Environment Configuration
+Create a `.env.local` file with your API key:
+```env
+VITE_GOOGLE_GEMINI_API_KEY=your-gemini-api-key-here
 ```
 
-### Core Components
-- **ConversationCanvas**: Main ReactFlow canvas component
-- **MessageNode**: Individual conversation nodes
-- **FloatingBranchInput**: Context-aware branching input
-- **Header**: Session management and controls
+> 🔐 **Security Note:** Your API key is only used client-side for direct communication with Google's Gemini API. Never commit API keys to version control.
 
-### State Management
-- **ConversationStore**: Sessions, nodes, edges, streaming
-- **UIStore**: UI state and window management
-- **Persistent Storage**: Local storage with versioned migration
+## 🎯 How to Use Lattice Chat
 
-## 🔧 Configuration
+### Starting Your First Conversation
+1. **Open Lattice Chat** in your browser
+2. **Click "Start Conversation"** or press `Ctrl+K` (Windows) / `⌘K` (Mac)
+3. **Type your question** and press Enter
+4. **Watch your conversation** appear as the first node on the canvas
 
-### Environment Variables
-```bash
-VITE_GEMINI_API_KEY=your_gemini_api_key_here  # Required
-```
+### Creating Conversation Branches
+1. **Select text** from any AI response by clicking and dragging
+2. **Click the "+" button** that appears near your selection
+3. **Add your follow-up question** in the quote input box
+4. **Press Enter** to create a new conversation branch
+5. **Explore multiple paths** from any conversation point
 
-### Development
-```bash
-npm run dev          # Development server
-npm run build        # Production build  
-npm run preview      # Preview build
-npm run lint         # ESLint
-```
+### Navigating the Canvas
+- **Pan** - Click and drag on empty space to move around
+- **Zoom** - Use mouse wheel or zoom controls in bottom-right
+- **Focus** - Click any conversation node to center it
+- **Fit View** - Click the fit-to-screen button to see entire conversation
 
-## 📚 API Integration
+### Advanced Features
+- **Keyboard Shortcuts** - `Ctrl+K`/`⌘K` to start new conversation
+- **Context Awareness** - Each branch maintains full conversation history
+- **Visual Connections** - Follow the lines to see conversation flow
+- **Node Details** - Click nodes to see timestamps and model information
 
-This application requires a valid Google Gemini API key:
-- Get your key from [Google AI Studio](https://makersuite.google.com/app/apikey)
-- No fallback or demo mode - proper API key required
-- Clear error messages for configuration issues
-
-## 📱 Browser Support
-
-- Chrome 90+ (recommended)
-- Firefox 88+
-- Safari 14+
-- Edge 90+
-
-## 🚧 Development Status
-
-This is a **prototype** focused on exploring canvas-based conversation interfaces. The codebase has been refactored for:
-- Clean, production-ready code
-- No legacy or demo code
-- Modern React patterns
-- Full TypeScript coverage
-- Comprehensive documentation
 
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create feature branch: `git checkout -b feature/name`
-3. Make changes with proper TypeScript types
-4. Test build: `npm run build`
-5. Submit pull request
+We welcome contributions! Here's how to get involved:
 
-## 📄 License
+### Development Setup
+```bash
+# Fork and clone the repository
+git clone https://github.com/your-username/lattice-chat.git
+cd lattice-chat
 
-MIT License - see [LICENSE](LICENSE) for details.
+# Install dependencies
+npm install
 
-## 🙏 Acknowledgments
+# Start development server with hot reload
+npm run dev
 
-- [Google Gemini AI](https://ai.google.dev/) - AI responses
-- [ReactFlow](https://reactflow.dev/) - Canvas functionality
-- [Framer Motion](https://www.framer.com/motion/) - Animations
-- [Tailwind CSS](https://tailwindcss.com/) - Styling
-- [Zustand](https://zustand-demo.pmnd.rs/) - State management
+# Run tests
+npm run test
 
----
-**LatticeChat - Prototype v1.0**
+# Build for production
+npm run build
+```
+
+### Development Workflow
+1. **Fork** the repository and create a feature branch
+2. **Make changes** with clear, descriptive commits
+3. **Add tests** for new functionality
+4. **Update documentation** as needed
+5. **Submit a pull request** with detailed description
+
+### Code Standards
+- **TypeScript** with strict type checking
+- **ESLint + Prettier** for consistent formatting
+- **Component documentation** with JSDoc
+- **Comprehensive testing** with Jest and React Testing Library
+
+
+##  License
+
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+
+***
+
+<div align="center">
+
+**Made with ❤️ by [Divyanshu9822](https://github.com/Divyanshu9822)**
+
+[🌟 Star on GitHub](https://github.com/Divyanshu9822/lattice-chat) • [🐛 Report Bug](https://github.com/Divyanshu9822/lattice-chat/issues) • [✨ Request Feature](https://github.com/Divyanshu9822/lattice-chat/issues)
+
+</div>
