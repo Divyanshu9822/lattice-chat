@@ -1,7 +1,7 @@
 # Lattice Chat
 
 > A revolutionary AI chat interface that transforms conversations through visual branching and context-aware interactions.
-
+<img width="2560" height="1600" alt="image" src="https://github.com/user-attachments/assets/cd62cc55-18d7-4218-9ce2-f6790e58f117" />
 
 AI conversations by introducing **Git-like branching** to chat interfaces. Unlike traditional linear chat applications, Lattice allows you to explore multiple conversation paths simultaneously on an interactive canvas, making complex discussions more organized and productive.
 
