@@ -49,7 +49,7 @@ AI conversations by introducing **Git-like branching** to chat interfaces. Unlik
 ### Quick Start
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/lattice-chat.git
+git clone https://github.com/Divyanshu9822/lattice-chat.git
 cd lattice-chat
 
 # Install dependencies
@@ -106,7 +106,7 @@ We welcome contributions! Here's how to get involved:
 ### Development Setup
 ```bash
 # Fork and clone the repository
-git clone https://github.com/your-username/lattice-chat.git
+git clone https://github.com/Divyanshu9822/lattice-chat.git
 cd lattice-chat
 
 # Install dependencies
