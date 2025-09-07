@@ -21,7 +21,7 @@ export const useAIChat = (): UseAIChat => {
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const {
-    getNodeHistory,
+    getNodeConversation,
     startStreaming,
     updateStreamingText,
     finishStreaming,
@@ -66,7 +66,7 @@ export const useAIChat = (): UseAIChat => {
 
       try {
         // Get conversation history for the specified node
-        const history = getNodeHistory(nodeId);
+        const history = getNodeConversation(nodeId);
         
         // Convert ChatMessage[] to ConversationMessage[] format for AI service
         const conversationHistory: ConversationMessage[] = history.map((msg: ChatMessage) => ({
@@ -100,7 +100,7 @@ export const useAIChat = (): UseAIChat => {
         setIsLoading(false);
       }
     },
-    [getNodeHistory, getAIService]
+    [getNodeConversation, getAIService]
   );
 
   /**
@@ -126,10 +126,10 @@ export const useAIChat = (): UseAIChat => {
 
       try {
         // Get conversation history for the specified node
-        const history = getNodeHistory(nodeId);
+        const history = getNodeConversation(nodeId);
         
         // Convert ChatMessage[] to ConversationMessage[] format for AI service
-        const conversationHistory: ConversationMessage[] = history.map(msg => ({
+        const conversationHistory: ConversationMessage[] = history.map((msg: ChatMessage) => ({
           id: crypto.randomUUID(),
           content: msg.content,
           role: msg.role,
@@ -177,7 +177,7 @@ export const useAIChat = (): UseAIChat => {
       }
     },
     [
-      getNodeHistory,
+      getNodeConversation,
       startStreaming,
       updateStreamingText,
       finishStreaming,

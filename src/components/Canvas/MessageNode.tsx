@@ -1,9 +1,11 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { motion } from 'framer-motion';
-import { User, Bot, GitBranch } from 'lucide-react';
+import { User, Bot, GitBranch, Quote, Clock, Zap } from 'lucide-react';
 import type { ConversationNode, TextSelection } from '../../types';
+import { Button } from '../ui';
 import { cn, formatTimestamp } from '../../utils';
+import { AI_CONFIG } from '../../config/app';
 
 export interface MessageNodeData {
   node: ConversationNode;
@@ -53,15 +55,11 @@ export const MessageNode: React.FC<NodeProps & { data: MessageNodeData }> = ({
       }
 
       // Compute offsets relative to the full AI content text
-      // Create a range from the start of aiContent to the selection start
       const prefixRange = document.createRange();
       prefixRange.setStart(aiContentElement, 0);
       prefixRange.setEnd(range.startContainer, range.startOffset);
       
-      // Compute startIndex as the length of the prefix text
       const startIndex = prefixRange.toString().length;
-      
-      // Compute endIndex based on startIndex + selectedText length
       const endIndex = startIndex + selectedText.length;
 
       const selectionData: TextSelection = {
@@ -95,14 +93,18 @@ export const MessageNode: React.FC<NodeProps & { data: MessageNodeData }> = ({
   return (
     <>
       <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.2 }}
+        initial={{ opacity: 0, scale: 0.95, y: 10 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
         className={cn(
-          'relative bg-white rounded-lg shadow-lg border-2 transition-all duration-200',
-          'min-w-[380px] max-w-[520px]',
-          selected ? 'border-blue-500 shadow-xl' : 'border-gray-200 hover:border-gray-300',
-          'cursor-default'
+          'relative rounded-2xl transition-all duration-250 ease-smooth',
+          'min-w-[400px] max-w-[600px]',
+          selected 
+            ? 'shadow-glow-lg scale-[1.02]' 
+            : 'shadow-large hover:shadow-xl hover:scale-[1.01]',
+          'cursor-default bg-canvas-node-bg-light dark:bg-canvas-node-bg-dark',
+          'border border-canvas-node-border-light dark:border-canvas-node-border-dark',
+          selected && 'border-primary-300 dark:border-primary-600'
         )}
         style={{ pointerEvents: 'auto' }}
       >
@@ -110,49 +112,76 @@ export const MessageNode: React.FC<NodeProps & { data: MessageNodeData }> = ({
         <Handle
           type="target"
           position={Position.Top}
-          className="w-3 h-3 bg-gray-400 border-2 border-white"
+          className={cn(
+            'w-3 h-3 border-2 transition-colors duration-200',
+            selected 
+              ? 'bg-primary-500 border-primary-300 dark:border-primary-600' 
+              : 'bg-secondary-400 border-white dark:border-secondary-800'
+          )}
           style={{ top: -6 }}
         />
         <Handle
           type="source"
           position={Position.Bottom}
-          className="w-3 h-3 bg-gray-400 border-2 border-white"
+          className={cn(
+            'w-3 h-3 border-2 transition-colors duration-200',
+            selected 
+              ? 'bg-primary-500 border-primary-300 dark:border-primary-600' 
+              : 'bg-secondary-400 border-white dark:border-secondary-800'
+          )}
           style={{ bottom: -6 }}
         />
 
-        {/* Conversation Context Header */}
+        {/* Context Header */}
         {(messageCount > 0 || hasQuotedText) && (
-          <div className="px-4 py-2 bg-gray-50 border-b border-gray-100">
-            <div className="flex items-center gap-2 text-xs text-gray-600">
+          <motion.div 
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            className="px-5 py-3 bg-secondary-50/50 dark:bg-secondary-900/30 border-b border-secondary-200/50 dark:border-secondary-700/50 backdrop-blur-sm"
+          >
+            <div className="flex items-center gap-3 text-xs">
               {messageCount > 0 && (
-                <span className="bg-gray-200 px-2 py-1 rounded">
-                  {messageCount} message{messageCount !== 1 ? 's' : ''} in history
-                </span>
+                <div className="flex items-center gap-1.5 px-2 py-1 bg-secondary-200/70 dark:bg-secondary-700/70 rounded-lg">
+                  <Clock className="w-3 h-3 text-secondary-500 dark:text-secondary-400" />
+                  <span className="text-secondary-700 dark:text-secondary-300 font-medium">
+                    {messageCount} in history
+                  </span>
+                </div>
               )}
               {hasQuotedText && (
-                <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded">
-                  Referencing: "{hasQuotedText.slice(0, 30)}..."
-                </span>
+                <div className="flex items-center gap-1.5 px-2 py-1 bg-primary-100 dark:bg-primary-900/30 rounded-lg">
+                  <Quote className="w-3 h-3 text-primary-600 dark:text-primary-400" />
+                  <span className="text-primary-700 dark:text-primary-300 font-medium">
+                    "{hasQuotedText.slice(0, 25)}..."
+                  </span>
+                </div>
               )}
             </div>
-          </div>
+          </motion.div>
         )}
 
         {/* User Message Section */}
-        <div className="border-b border-gray-100">
-          <div className="px-4 py-3 bg-blue-50 flex items-center gap-3">
-            <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
-              <User className="w-3 h-3 text-white" />
+        <div className="border-b border-secondary-200/50 dark:border-secondary-700/50">
+          <div className="px-5 py-3 bg-gradient-to-r from-primary-50/70 via-primary-50/50 to-transparent dark:from-primary-950/30 dark:via-primary-950/20 dark:to-transparent">
+            <div className="flex items-center gap-3">
+              <div className="w-7 h-7 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center shadow-medium">
+                <User className="w-4 h-4 text-white" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-sm text-secondary-900 dark:text-secondary-100">
+                    You
+                  </span>
+                  <div className="w-1.5 h-1.5 bg-primary-400 rounded-full" />
+                  <span className="text-xs text-secondary-500 dark:text-secondary-400">
+                    {formatTimestamp(node.createdAt)}
+                  </span>
+                </div>
+              </div>
             </div>
-            <div className="flex-1">
-              <p className="font-medium text-sm text-gray-900">You</p>
-            </div>
-            <p className="text-xs text-gray-500">
-              {formatTimestamp(node.createdAt)}
-            </p>
           </div>
-          <div className="nodrag p-4" style={{ userSelect: 'text' }}>
-            <div className="nodrag text-sm leading-relaxed text-gray-900 whitespace-pre-wrap break-words select-text cursor-text">
+          <div className="nodrag px-5 py-4" style={{ userSelect: 'text' }}>
+            <div className="nodrag text-sm leading-relaxed text-secondary-900 dark:text-secondary-100 whitespace-pre-wrap break-words select-text cursor-text font-medium">
               {currentExchange?.userMessage}
             </div>
           </div>
@@ -160,76 +189,113 @@ export const MessageNode: React.FC<NodeProps & { data: MessageNodeData }> = ({
 
         {/* AI Response Section */}
         <div>
-          <div className="px-4 py-3 bg-green-50 flex items-center gap-3">
-            <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-              <Bot className="w-3 h-3 text-white" />
-            </div>
-            <div className="flex-1">
-              <p className="font-medium text-sm text-gray-900">Assistant</p>
-            </div>
-            <span className="px-2 py-1 bg-gray-100 text-xs text-gray-600 rounded">
-              Gemini 2.5 Flash
-            </span>
-            <p className="text-xs text-gray-500">
-              {formatTimestamp(node.createdAt)}
-            </p>
-          </div>
-          <div className="nodrag p-4 relative" style={{ userSelect: 'text' }}>
-            {isStreaming ? (
-              <div className="flex flex-col gap-2 text-gray-500">
+          <div className="px-5 py-3 bg-gradient-to-r from-accent-emerald-50/70 via-accent-emerald-50/50 to-transparent dark:from-accent-emerald-950/30 dark:via-accent-emerald-950/20 dark:to-transparent">
+            <div className="flex items-center gap-3">
+              <div className="w-7 h-7 bg-gradient-to-br from-accent-emerald-500 to-accent-emerald-600 rounded-xl flex items-center justify-center shadow-medium">
+                <Bot className="w-4 h-4 text-white" />
+              </div>
+              <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  <div className="animate-spin w-4 h-4 border-2 border-green-500 border-t-transparent rounded-full"></div>
-                  <span className="text-sm">Thinking...</span>
+                  <span className="font-semibold text-sm text-secondary-900 dark:text-secondary-100">
+                    Assistant
+                  </span>
+                  <div className="flex items-center gap-1.5 px-2 py-0.5 bg-accent-amber-100 dark:bg-accent-amber-900/30 rounded-md">
+                    <Zap className="w-2.5 h-2.5 text-accent-amber-600 dark:text-accent-amber-400" />
+                    <span className="text-xs font-medium text-accent-amber-700 dark:text-accent-amber-300">
+                      {AI_CONFIG.modelDisplayName}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <span className="text-xs text-secondary-500 dark:text-secondary-400">
+                {formatTimestamp(node.createdAt)}
+              </span>
+            </div>
+          </div>
+          
+          <div className="nodrag px-5 py-4 relative" style={{ userSelect: 'text' }}>
+            {isStreaming ? (
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-accent-emerald-500 border-t-transparent rounded-full animate-spin" />
+                  <span className="text-sm text-accent-emerald-600 dark:text-accent-emerald-400 font-medium animate-glow-pulse">
+                    Thinking...
+                  </span>
                 </div>
                 {streamingText && (
-                  <div
+                  <motion.div
                     ref={aiContentRef}
-                    className="nodrag text-sm leading-relaxed text-gray-900 whitespace-pre-wrap break-words select-text cursor-text"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="nodrag text-sm leading-relaxed text-secondary-800 dark:text-secondary-200 whitespace-pre-wrap break-words select-text cursor-text"
                     onMouseUp={handleTextSelection}
                     style={{ userSelect: 'text', WebkitUserSelect: 'text', MozUserSelect: 'text' }}
                   >
                     {streamingText}
-                  </div>
+                    <motion.span 
+                      className="inline-block w-2 h-4 bg-accent-emerald-500 ml-1"
+                      animate={{ opacity: [1, 0] }}
+                      transition={{ duration: 0.8, repeat: Infinity, repeatType: 'reverse' }}
+                    />
+                  </motion.div>
                 )}
               </div>
             ) : currentExchange?.aiResponse ? (
               <div
                 ref={aiContentRef}
-                className="nodrag text-sm leading-relaxed text-gray-900 whitespace-pre-wrap break-words select-text cursor-text"
+                className="nodrag text-sm leading-relaxed text-secondary-800 dark:text-secondary-200 whitespace-pre-wrap break-words select-text cursor-text"
                 onMouseUp={handleTextSelection}
                 style={{ userSelect: 'text', WebkitUserSelect: 'text', MozUserSelect: 'text' }}
               >
                 {currentExchange.aiResponse}
               </div>
             ) : (
-              <div className="text-sm text-gray-400 italic">
-                Response pending...
+              <div className="flex items-center gap-2 text-sm text-secondary-500 dark:text-secondary-400">
+                <div className="w-4 h-4 border-2 border-secondary-300 dark:border-secondary-600 border-t-transparent rounded-full animate-spin" />
+                <span className="italic">Awaiting response...</span>
               </div>
             )}
           </div>
         </div>
 
-        {/* Branch Button - Only shows when text is selected from AI response */}
+        {/* Enhanced Branch Button */}
         {textSelection && (
-          <motion.button
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
-            className="absolute top-2 right-2 w-8 h-8 bg-blue-500 hover:bg-blue-600 rounded-full flex items-center justify-center transition-colors duration-200 shadow-lg"
-            onClick={() => {
-              onBranch?.(id, textSelection);
-              setTextSelection(null);
-              window.getSelection()?.removeAllRanges();
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.8, y: 10 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            className="absolute -top-6 -right-4 z-50"
+            style={{ 
+              pointerEvents: 'auto',
+              transform: 'translateZ(0)', // Force hardware acceleration
             }}
-            title={`Create branch from: "${textSelection.selectedText.slice(0, 30)}..."`}
           >
-            <GitBranch className="w-4 h-4 text-white" />
-          </motion.button>
+            <Button
+              size="sm"
+              onClick={() => {
+                onBranch?.(id, textSelection);
+                setTextSelection(null);
+                window.getSelection()?.removeAllRanges();
+              }}
+              className="shadow-xl bg-primary-600 hover:bg-primary-700 text-white border-2 border-white gap-2 px-4 py-2 whitespace-nowrap rounded-full"
+              title={`Create branch from: "${textSelection.selectedText.slice(0, 30)}..."`}
+            >
+              <GitBranch className="w-4 h-4" />
+              <span className="text-xs font-semibold">Branch</span>
+            </Button>
+          </motion.div>
         )}
 
-        {/* Node Status Indicator */}
+        {/* Selection Indicator */}
         {selected && (
-          <div className="absolute -top-2 -right-2 w-4 h-4 bg-blue-500 rounded-full border-2 border-white" />
+          <motion.div
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="absolute -top-2 -right-2 w-5 h-5 bg-primary-500 rounded-full border-2 border-white dark:border-secondary-900 shadow-medium flex items-center justify-center"
+          >
+            <div className="w-2 h-2 bg-white rounded-full animate-glow-pulse" />
+          </motion.div>
         )}
       </motion.div>
     </>

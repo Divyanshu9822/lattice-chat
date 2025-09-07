@@ -1,200 +1,111 @@
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Settings, MoreHorizontal, MessageSquare, Plus, Trash2 } from 'lucide-react';
-import { useConversationStore } from '../../store';
-import { cn } from '../../utils';
+import React from 'react';
+import { motion } from 'framer-motion';
+import { Sparkles, Sun, Moon, Monitor, Settings } from 'lucide-react';
+import { useTheme } from '../../contexts/ThemeContext';
+import { Button } from '../ui';
+import { AI_CONFIG } from '../../config/app';
 
-interface HeaderProps {
-  className?: string;
-}
+export const Header: React.FC = () => {
+  const { theme, setTheme } = useTheme();
 
-export const Header: React.FC<HeaderProps> = ({ className }) => {
-  const [showSessionMenu, setShowSessionMenu] = useState(false);
-  
-  const {
-    getActiveSession,
-    sessions,
-    createSession,
-    deleteSession,
-    setActiveSession,
-    clearAll,
-  } = useConversationStore();
-
-  const activeSession = getActiveSession();
-
-  const handleNewSession = () => {
-    createSession();
-    setShowSessionMenu(false);
+  const themeIcons = {
+    light: Sun,
+    dark: Moon,
+    system: Monitor,
   };
 
-  const handleDeleteSession = (sessionId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (sessions.length > 1) {
-      deleteSession(sessionId);
-    }
-  };
+  const ThemeIcon = themeIcons[theme];
 
-  const handleSelectSession = (sessionId: string) => {
-    setActiveSession(sessionId);
-    setShowSessionMenu(false);
+  const cycleTheme = () => {
+    const themes: Array<'light' | 'dark' | 'system'> = ['light', 'dark', 'system'];
+    const currentIndex = themes.indexOf(theme);
+    const nextIndex = (currentIndex + 1) % themes.length;
+    setTheme(themes[nextIndex]);
   };
 
   return (
-    <header className={cn(
-      'bg-white border-b border-gray-200 px-6 py-4 relative z-40',
-      className
-    )}>
-      <div className="flex items-center justify-between">
-        {/* Left Side - Logo */}
-        <div className="flex items-center">
-          <motion.a
-            href="/"
-            whileHover={{ scale: 1.05 }}
-            className="flex items-center gap-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-            aria-label="Home"
-            onClick={(e) => {
-              e.preventDefault();
-              window.location.reload();
-            }}
+    <motion.header 
+      initial={{ opacity: 0, y: -20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: 'easeOut' }}
+      className="relative z-50 border-b border-secondary-200/50 dark:border-secondary-700/50 backdrop-blur-sm bg-white/80 dark:bg-secondary-900/80"
+    >
+      <div className="px-6 py-4">
+        <div className="flex items-center justify-between">
+          {/* Logo and Brand */}
+          <motion.div 
+            className="flex items-center gap-3"
+            whileHover={{ scale: 1.02 }}
+            transition={{ duration: 0.2 }}
           >
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-              <span className="text-white text-sm font-bold">LC</span>
+            <div className="relative">
+              <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg flex items-center justify-center shadow-medium">
+                <Sparkles className="w-5 h-5 text-white" />
+              </div>
+              <div className="absolute -top-1 -right-1 w-3 h-3 bg-accent-emerald-500 rounded-full animate-glow-pulse" />
             </div>
             <div>
-              <div 
-                className="text-lg font-semibold text-gray-900" 
-                role="img" 
-                aria-label="LatticeChat logo"
-              >
-                LatticeChat
+              <h1 className="text-xl font-semibold text-secondary-900 dark:text-secondary-100 tracking-tight">
+                Lattice
+              </h1>
+              <p className="text-xs text-secondary-500 dark:text-secondary-400 -mt-0.5">
+                AI Canvas Chat
+              </p>
+            </div>
+          </motion.div>
+
+
+          {/* Controls */}
+          <div className="flex items-center gap-2">
+            {/* Model Info */}
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-secondary-100 dark:bg-secondary-800 rounded-lg text-xs text-secondary-700 dark:text-secondary-300">
+              <div className="w-2 h-2 bg-accent-amber-500 rounded-full" />
+              {AI_CONFIG.modelDisplayName}
+            </div>
+
+            {/* Theme Toggle */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={cycleTheme}
+              className="relative"
+              title={`Switch to ${theme === 'light' ? 'dark' : theme === 'dark' ? 'system' : 'light'} theme`}
+            >
+              <ThemeIcon className="w-4 h-4" />
+            </Button>
+
+            {/* Settings */}
+            <Button
+              variant="ghost"
+              size="icon"
+              title="Settings"
+            >
+              <Settings className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Quick Actions Bar */}
+        <motion.div 
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          transition={{ duration: 0.3, delay: 0.2 }}
+          className="mt-3 pt-3 border-t border-secondary-200/50 dark:border-secondary-700/50"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4 text-xs text-secondary-500 dark:text-secondary-400">
+              <div className="flex items-center gap-1">
+                <kbd className="px-1.5 py-0.5 bg-secondary-100 dark:bg-secondary-800 rounded text-xs">⌘K</kbd>
+                <span>New conversation</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <kbd className="px-1.5 py-0.5 bg-secondary-100 dark:bg-secondary-800 rounded text-xs">Select text</kbd>
+                <span>Branch conversation</span>
               </div>
             </div>
-          </motion.a>
-        </div>
-
-        {/* Right Side - Controls */}
-        <div className="flex items-center gap-3">
-          {/* Session Selector */}
-          <div className="relative">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setShowSessionMenu(!showSessionMenu)}
-              className={cn(
-                'p-2 hover:bg-gray-100 rounded-lg transition-colors',
-                'flex items-center gap-2 text-sm font-medium text-gray-700',
-                showSessionMenu && 'bg-gray-100'
-              )}
-            >
-              <span className="hidden sm:inline">
-                {activeSession?.title || 'No Session'}
-              </span>
-              <MoreHorizontal className="w-4 h-4" />
-            </motion.button>
-
-            {/* Session Dropdown */}
-            <AnimatePresence>
-              {showSessionMenu && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                  transition={{ duration: 0.15 }}
-                  className="absolute right-0 top-full mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50"
-                >
-                  {/* New Session Button */}
-                  <button
-                    onClick={handleNewSession}
-                    className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3 text-sm"
-                  >
-                    <Plus className="w-4 h-4 text-blue-600" />
-                    <span className="font-medium text-blue-600">New Conversation</span>
-                  </button>
-
-                  {sessions.length > 0 && (
-                    <>
-                      <hr className="my-2 border-gray-100" />
-                      
-                      {/* Session List */}
-                      <div className="max-h-64 overflow-y-auto">
-                        {sessions.map((session) => (
-                          <div
-                            key={session.id}
-                            className={cn(
-                              'px-4 py-2 hover:bg-gray-50 flex items-center justify-between group',
-                              session.id === activeSession?.id && 'bg-blue-50'
-                            )}
-                          >
-                            <button
-                              onClick={() => handleSelectSession(session.id)}
-                              className="flex-1 text-left"
-                            >
-                              <div className="flex items-center gap-3">
-                                <MessageSquare className="w-4 h-4 text-gray-400" />
-                                <div>
-                                  <p className="text-sm font-medium text-gray-900 truncate">
-                                    {session.title}
-                                  </p>
-                                  <p className="text-xs text-gray-500">
-                                    {session.metadata.totalMessages} messages • {session.metadata.branchCount} branches
-                                  </p>
-                                </div>
-                              </div>
-                            </button>
-                            
-                            {sessions.length > 1 && (
-                              <button
-                                onClick={(e) => handleDeleteSession(session.id, e)}
-                                className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 rounded text-red-600 transition-all"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </button>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-
-                      {sessions.length > 1 && (
-                        <>
-                          <hr className="my-2 border-gray-100" />
-                          <button
-                            onClick={() => {
-                              clearAll();
-                              setShowSessionMenu(false);
-                            }}
-                            className="w-full px-4 py-2 text-left hover:bg-red-50 flex items-center gap-3 text-sm text-red-600"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                            <span>Clear All Sessions</span>
-                          </button>
-                        </>
-                      )}
-                    </>
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
           </div>
-
-          {/* Settings Button */}
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            title="Settings"
-          >
-            <Settings className="w-5 h-5 text-gray-600" />
-          </motion.button>
-        </div>
+        </motion.div>
       </div>
-
-      {/* Click outside to close menu */}
-      {showSessionMenu && (
-        <div
-          className="fixed inset-0 z-40"
-          onClick={() => setShowSessionMenu(false)}
-        />
-      )}
-    </header>
+    </motion.header>
   );
 };
