@@ -1,5 +1,5 @@
 import React from 'react';
-import { Handle, Position, type NodeProps } from 'reactflow';
+import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { motion } from 'framer-motion';
 import { MessageSquare } from 'lucide-react';
 import { cn } from '../../utils';
@@ -10,7 +10,7 @@ export interface RootNodeData {
   onBranch?: (nodeId: string) => void;
 }
 
-export const RootNode: React.FC<NodeProps<RootNodeData>> = ({
+export const RootNode: React.FC<NodeProps & { data: RootNodeData }> = ({
   id,
   data,
   selected,

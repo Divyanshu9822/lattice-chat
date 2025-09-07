@@ -8,6 +8,7 @@ interface FloatingBranchInputProps {
   onSubmit: (message: string) => void;
   onCancel: () => void;
   selectedText?: string;
+  quotedText?: string;
   placeholder?: string;
   className?: string;
 }
@@ -17,6 +18,7 @@ export const FloatingBranchInput: React.FC<FloatingBranchInputProps> = ({
   onSubmit,
   onCancel,
   selectedText,
+  quotedText,
   placeholder,
   className,
 }) => {
@@ -25,11 +27,25 @@ export const FloatingBranchInput: React.FC<FloatingBranchInputProps> = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    // Auto-focus the input when it appears
-    if (textareaRef.current) {
-      textareaRef.current.focus();
+    // Pre-populate with quoted text if provided
+    if (quotedText) {
+      const quotedMessage = `> "${quotedText}"\n\n`;
+      setMessage(quotedMessage);
+      
+      // Auto-focus and position cursor after quoted text
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.focus();
+          textareaRef.current.setSelectionRange(quotedMessage.length, quotedMessage.length);
+        }
+      }, 100);
+    } else {
+      // Auto-focus the input when it appears (normal case)
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+      }
     }
-  }, []);
+  }, [quotedText]);
 
   // Auto-resize textarea
   useEffect(() => {

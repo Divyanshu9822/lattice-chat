@@ -11,8 +11,7 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
-    "@reactflow/background": "^11.3.14",
-    "@reactflow/minimap": "^11.7.14",
+    "@xyflow/react": "^12.8.4",
     "autoprefixer": "^10.4.21",
     "clsx": "^2.1.1",
     "framer-motion": "^12.23.12",
@@ -20,7 +19,6 @@
     "postcss": "^8.5.6",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
-    "reactflow": "^11.11.4",
     "tailwindcss": "^3.4.0",
     "zustand": "^5.0.8"
   },

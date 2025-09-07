@@ -1,278 +1,210 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { Handle, Position, type NodeProps } from 'reactflow';
+import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { motion } from 'framer-motion';
-import { MoreHorizontal, User, Bot, Plus } from 'lucide-react';
+import { User, Bot, GitBranch } from 'lucide-react';
 import type { ConversationMessage, TextSelection } from '../../types';
 import { cn, formatTimestamp } from '../../utils';
 
 export interface MessageNodeData {
-  exchange?: {
+  exchange: {
     userMessage: ConversationMessage;
     aiResponse?: ConversationMessage;
     isGenerating?: boolean;
   };
-  message?: ConversationMessage; // Keep for backward compatibility
-  isSelected?: boolean;
   onTextSelection?: (selection: TextSelection) => void;
   onBranch?: (nodeId: string, selection?: TextSelection) => void;
 }
 
-export const MessageNode: React.FC<NodeProps<MessageNodeData>> = ({
+export const MessageNode: React.FC<NodeProps & { data: MessageNodeData }> = ({
   id,
   data,
   selected,
 }) => {
-  const [showBranchButton, setShowBranchButton] = useState(false);
   const [textSelection, setTextSelection] = useState<TextSelection | null>(null);
-  const userContentRef = useRef<HTMLDivElement>(null);
   const aiContentRef = useRef<HTMLDivElement>(null);
 
-  const { exchange, message, onTextSelection, onBranch } = data;
-  
-  // Support both exchange mode and legacy single message mode
-  const isExchangeMode = !!exchange;
-  const userMessage = exchange?.userMessage || (message?.role === 'user' ? message : null);
-  const aiResponse = exchange?.aiResponse || (message?.role === 'assistant' ? message : null);
-  const isGenerating = exchange?.isGenerating || false;
+  const { exchange, onTextSelection, onBranch } = data;
+  const { userMessage, aiResponse, isGenerating } = exchange;
 
-  const handleTextSelection = useCallback((contentType: 'user' | 'ai') => {
-    const selection = window.getSelection();
-    const contentRef = contentType === 'user' ? userContentRef : aiContentRef;
-    
-    if (!selection || selection.isCollapsed || !contentRef.current) return;
+  const handleTextSelection = useCallback(() => {
+    setTimeout(() => {
+      const selection = window.getSelection();
+      
+      if (!selection || selection.isCollapsed || selection.rangeCount === 0) {
+        setTextSelection(null);
+        return;
+      }
 
-    const selectedText = selection.toString().trim();
-    if (!selectedText) return;
+      const selectedText = selection.toString().trim();
+      if (!selectedText) {
+        setTextSelection(null);
+        return;
+      }
 
-    const range = selection.getRangeAt(0);
-    const rect = range.getBoundingClientRect();
-    
-    const selectionData: TextSelection = {
-      nodeId: id,
-      startIndex: range.startOffset,
-      endIndex: range.endOffset,
-      selectedText,
-      position: { x: rect.left, y: rect.top },
-    };
+      // Only track selection if it's in AI content
+      const range = selection.getRangeAt(0);
+      const aiContentElement = aiContentRef.current;
+      
+      if (!aiContentElement || !aiContentElement.contains(range.commonAncestorContainer)) {
+        setTextSelection(null);
+        return;
+      }
 
-    setTextSelection(selectionData);
-    onTextSelection?.(selectionData);
-    setShowBranchButton(true);
+      // Compute offsets relative to the full AI content text
+      // Create a range from the start of aiContent to the selection start
+      const prefixRange = document.createRange();
+      prefixRange.setStart(aiContentElement, 0);
+      prefixRange.setEnd(range.startContainer, range.startOffset);
+      
+      // Compute startIndex as the length of the prefix text
+      const startIndex = prefixRange.toString().length;
+      
+      // Compute endIndex based on startIndex + selectedText length
+      const endIndex = startIndex + selectedText.length;
+
+      const selectionData: TextSelection = {
+        nodeId: id,
+        startIndex,
+        endIndex,
+        selectedText,
+        position: { x: 0, y: 0 },
+      };
+
+      setTextSelection(selectionData);
+      onTextSelection?.(selectionData);
+    }, 100);
   }, [id, onTextSelection]);
 
-  const handleBranchClick = useCallback(() => {
-    onBranch?.(id, textSelection || undefined);
-    setShowBranchButton(false);
-    setTextSelection(null);
-    window.getSelection()?.removeAllRanges();
-  }, [id, onBranch, textSelection]);
-
-  const handleMouseLeave = useCallback(() => {
-    if (!textSelection) {
-      setShowBranchButton(false);
+  const handleSelectionClear = useCallback(() => {
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed) {
+      setTextSelection(null);
     }
-  }, [textSelection]);
+  }, []);
+
+  // Listen for selection changes globally
+  React.useEffect(() => {
+    document.addEventListener('selectionchange', handleSelectionClear);
+    return () => {
+      document.removeEventListener('selectionchange', handleSelectionClear);
+    };
+  }, [handleSelectionClear]);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.2 }}
-      className={cn(
-        'relative bg-white rounded-lg shadow-lg border-2 transition-all duration-200',
-        'min-w-[380px] max-w-[520px]',
-        selected ? 'border-blue-500 shadow-xl' : 'border-gray-200 hover:border-gray-300',
-        'cursor-default'
-      )}
-      onMouseLeave={handleMouseLeave}
-    >
-      {/* Connection Handles */}
-      <Handle
-        type="target"
-        position={Position.Top}
-        className="w-3 h-3 bg-gray-400 border-2 border-white"
-        style={{ top: -6 }}
-      />
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        className="w-3 h-3 bg-gray-400 border-2 border-white"
-        style={{ bottom: -6 }}
-      />
+    <>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.2 }}
+        className={cn(
+          'relative bg-white rounded-lg shadow-lg border-2 transition-all duration-200',
+          'min-w-[380px] max-w-[520px]',
+          selected ? 'border-blue-500 shadow-xl' : 'border-gray-200 hover:border-gray-300',
+          'cursor-default'
+        )}
+        style={{ pointerEvents: 'auto' }}
+      >
+        {/* Connection Handles */}
+        <Handle
+          type="target"
+          position={Position.Top}
+          className="w-3 h-3 bg-gray-400 border-2 border-white"
+          style={{ top: -6 }}
+        />
+        <Handle
+          type="source"
+          position={Position.Bottom}
+          className="w-3 h-3 bg-gray-400 border-2 border-white"
+          style={{ bottom: -6 }}
+        />
 
-      {isExchangeMode ? (
-        /* Exchange Mode: User Question + AI Response */
-        <>
-          {/* User Message Section */}
-          {userMessage && (
-            <div className="border-b border-gray-100">
-              <div className="px-4 py-3 bg-blue-50 flex items-center gap-3">
-                <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
-                  <User className="w-3 h-3 text-white" />
-                </div>
-                <div className="flex-1">
-                  <p className="font-medium text-sm text-gray-900">You</p>
-                </div>
-                <p className="text-xs text-gray-500">
-                  {formatTimestamp(userMessage.timestamp)}
-                </p>
-              </div>
-              <div className="p-4">
-                <div
-                  ref={userContentRef}
-                  className="text-sm leading-relaxed text-gray-900 whitespace-pre-wrap break-words select-text"
-                  onMouseUp={() => handleTextSelection('user')}
-                >
-                  {userMessage.content}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* AI Response Section */}
-          <div>
-            <div className="px-4 py-3 bg-green-50 flex items-center gap-3">
-              <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                <Bot className="w-3 h-3 text-white" />
-              </div>
-              <div className="flex-1">
-                <p className="font-medium text-sm text-gray-900">Assistant</p>
-              </div>
-              {aiResponse?.metadata?.model && (
-                <span className="px-2 py-1 bg-gray-100 text-xs text-gray-600 rounded">
-                  {aiResponse.metadata.model}
-                </span>
-              )}
-              {aiResponse && (
-                <p className="text-xs text-gray-500">
-                  {formatTimestamp(aiResponse.timestamp)}
-                </p>
-              )}
-            </div>
-            <div className="p-4 relative">
-              {isGenerating ? (
-                <div className="flex items-center gap-2 text-gray-500">
-                  <div className="animate-spin w-4 h-4 border-2 border-green-500 border-t-transparent rounded-full"></div>
-                  <span className="text-sm">Thinking...</span>
-                </div>
-              ) : aiResponse ? (
-                <div
-                  ref={aiContentRef}
-                  className="text-sm leading-relaxed text-gray-900 whitespace-pre-wrap break-words select-text"
-                  onMouseUp={() => handleTextSelection('ai')}
-                >
-                  {aiResponse.content}
-                </div>
-              ) : (
-                <div className="text-sm text-gray-400 italic">
-                  Response pending...
-                </div>
-              )}
-
-              {/* Branch Button for Text Selection */}
-              {showBranchButton && textSelection && (
-                <motion.button
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  onClick={handleBranchClick}
-                  className="absolute z-10 w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-blue-600 transition-colors duration-200"
-                  style={{
-                    right: 8,
-                    top: 8,
-                  }}
-                  title="Create branch from selection"
-                >
-                  <Plus className="w-4 h-4" />
-                </motion.button>
-              )}
-            </div>
-          </div>
-        </>
-      ) : (
-        /* Legacy Mode: Single Message */
-        <>
-          {/* Node Header */}
-          <div className={cn(
-            'px-4 py-3 border-b border-gray-100 flex items-center gap-3',
-            message?.role === 'user' ? 'bg-blue-50' : 'bg-green-50'
-          )}>
-            <div className={cn(
-              'w-8 h-8 rounded-full flex items-center justify-center',
-              message?.role === 'user' ? 'bg-blue-500 text-white' : 'bg-green-500 text-white'
-            )}>
-              {message?.role === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
+        {/* User Message Section */}
+        <div className="border-b border-gray-100">
+          <div className="px-4 py-3 bg-blue-50 flex items-center gap-3">
+            <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
+              <User className="w-3 h-3 text-white" />
             </div>
             <div className="flex-1">
-              <p className="font-medium text-sm text-gray-900">
-                {message?.role === 'user' ? 'You' : 'Assistant'}
-              </p>
-              {message && (
-                <p className="text-xs text-gray-500">
-                  {formatTimestamp(message.timestamp)}
-                </p>
-              )}
+              <p className="font-medium text-sm text-gray-900">You</p>
             </div>
-            {message?.metadata?.model && (
+            <p className="text-xs text-gray-500">
+              {formatTimestamp(userMessage.timestamp)}
+            </p>
+          </div>
+          <div className="nodrag p-4" style={{ userSelect: 'text' }}>
+            <div className="nodrag text-sm leading-relaxed text-gray-900 whitespace-pre-wrap break-words select-text cursor-text">
+              {userMessage.content}
+            </div>
+          </div>
+        </div>
+
+        {/* AI Response Section */}
+        <div>
+          <div className="px-4 py-3 bg-green-50 flex items-center gap-3">
+            <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+              <Bot className="w-3 h-3 text-white" />
+            </div>
+            <div className="flex-1">
+              <p className="font-medium text-sm text-gray-900">Assistant</p>
+            </div>
+            {aiResponse?.metadata?.model && (
               <span className="px-2 py-1 bg-gray-100 text-xs text-gray-600 rounded">
-                {message.metadata.model}
+                {aiResponse.metadata.model}
               </span>
             )}
+            {aiResponse && (
+              <p className="text-xs text-gray-500">
+                {formatTimestamp(aiResponse.timestamp)}
+              </p>
+            )}
           </div>
-
-          {/* Message Content */}
-          <div className="p-4 relative">
-            {message && (
+          <div className="nodrag p-4 relative" style={{ userSelect: 'text' }}>
+            {isGenerating ? (
+              <div className="flex items-center gap-2 text-gray-500">
+                <div className="animate-spin w-4 h-4 border-2 border-green-500 border-t-transparent rounded-full"></div>
+                <span className="text-sm">Thinking...</span>
+              </div>
+            ) : aiResponse ? (
               <div
-                ref={userContentRef}
-                className="text-sm leading-relaxed text-gray-900 whitespace-pre-wrap break-words select-text"
-                onMouseUp={() => handleTextSelection('user')}
+                ref={aiContentRef}
+                className="nodrag text-sm leading-relaxed text-gray-900 whitespace-pre-wrap break-words select-text cursor-text"
+                onMouseUp={handleTextSelection}
+                style={{ userSelect: 'text', WebkitUserSelect: 'text', MozUserSelect: 'text' }}
               >
-                {message.content}
+                {aiResponse.content}
+              </div>
+            ) : (
+              <div className="text-sm text-gray-400 italic">
+                Response pending...
               </div>
             )}
-
-            {/* Branch Button for Text Selection */}
-            {showBranchButton && textSelection && (
-              <motion.button
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-                onClick={handleBranchClick}
-                className="absolute z-10 w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-blue-600 transition-colors duration-200"
-                style={{
-                  left: 100,
-                  top: 20,
-                }}
-                title="Create branch from selection"
-              >
-                <Plus className="w-4 h-4" />
-              </motion.button>
-            )}
           </div>
-        </>
-      )}
+        </div>
 
-      {/* General Branch Button */}
-      <motion.button
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="absolute top-2 right-2 w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors duration-200"
-        onClick={() => {
-          console.log('Branch button clicked for node:', id);
-          console.log('onBranch function:', onBranch);
-          onBranch?.(id);
-        }}
-        title="Create branch from this exchange"
-      >
-        <MoreHorizontal className="w-3 h-3 text-gray-600" />
-      </motion.button>
+        {/* Branch Button - Only shows when text is selected from AI response */}
+        {textSelection && (
+          <motion.button
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            className="absolute top-2 right-2 w-8 h-8 bg-blue-500 hover:bg-blue-600 rounded-full flex items-center justify-center transition-colors duration-200 shadow-lg"
+            onClick={() => {
+              onBranch?.(id, textSelection);
+              setTextSelection(null);
+              window.getSelection()?.removeAllRanges();
+            }}
+            title={`Create branch from: "${textSelection.selectedText.slice(0, 30)}..."`}
+          >
+            <GitBranch className="w-4 h-4 text-white" />
+          </motion.button>
+        )}
 
-      {/* Node Status Indicator */}
-      {selected && (
-        <div className="absolute -top-2 -right-2 w-4 h-4 bg-blue-500 rounded-full border-2 border-white" />
-      )}
-    </motion.div>
+        {/* Node Status Indicator */}
+        {selected && (
+          <div className="absolute -top-2 -right-2 w-4 h-4 bg-blue-500 rounded-full border-2 border-white" />
+        )}
+      </motion.div>
+    </>
   );
 };
 
